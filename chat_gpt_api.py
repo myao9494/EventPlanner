@@ -301,7 +301,7 @@ def trans_datetime(kekka):
 # -
 
 def main(tex):
-    now = pendulum.now()
+    now = pendulum.now('Asia/Tokyo')
     kekka = remind_make.main(tex, now)
     response = confirm_todo_or_schdule(tex,now)
     msg = response.choices[0].message.content
