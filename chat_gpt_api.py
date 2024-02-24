@@ -14,7 +14,7 @@
 
 # +
 from dotenv import load_dotenv
-import openai
+from openai import OpenAI
 import re
 import pendulum
 import datetime
@@ -24,8 +24,8 @@ import remind_make
 import os
 
 load_dotenv()  # .envファイルから環境変数をロード
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
+client = OpenAI()
+# openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # +
 # mes = f"次の文から予定が作れますか?できない場合はtodoの情報をjsonで作ってください。できる場合はスケジュールをjsonで作って。todoでもあり、スケジュールでもある場合は、todoとスケジュールの両方のjsonを作ってください。「{tex}」"
@@ -110,7 +110,7 @@ def createTodo_with_schedule(mes, now,model="gpt3"):
         model="gpt-3.5-turbo"
         
     # OpenAIのChatCompletion.createメソッドを使用して応答を生成
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model= model,
 #         model="gpt-3.5-turbo",
         # ユーザからのメッセージを引数に設定
@@ -165,7 +165,7 @@ def sort_task(mes):
 
     """
     # OpenAIのChatCompletion.createメソッドを使用して応答を生成
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         # ユーザからのメッセージを引数に設定
         messages=[{"role": "user", "content": f"{mes}"}],
@@ -209,7 +209,7 @@ def confirm_todo_or_schdule(tex,now):
 
     """
     mes = f"今を{str(now)}とした場合、「{tex}」が示す日時を、{str(now)}と同じ形式でのみ出力する。期間がある場合は開始日時を出力する"
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": mes},
@@ -304,28 +304,28 @@ def main(tex):
     now = pendulum.now()
     kekka = remind_make.main(tex, now)
     response = confirm_todo_or_schdule(tex,now)
-    msg = response["choices"][0]["message"]["content"].lstrip()
+    msg = response.choices[0].message.content
     if msg == str(now) or not extract_datetime_from_string(msg):
         print("これはTODO")
         res = sort_task(tex)
-        print(get_message_content(res))
-        bunrui = get_message_content(res)["sort"]
+#         print(get_message_content(res))
+        bunrui = res.choices[0].message.function_call.arguments
+        bunrui = eval(bunrui)
+        bunrui = bunrui["sort"]
         return ["todo", tex,bunrui]
     else:
         print(msg)
         nitiji = extract_datetime_from_string(msg)
         print(f"これはスケジュール{nitiji}")
         res = createTodo_with_schedule(tex, now,"gpt3")
-        sc = get_message_content(res)
+        sc = res.choices[0].message.function_call.arguments
+        sc = eval(sc)
         print(sc)
         sc = update_date_in_datetime_str(sc,nitiji)
         return ["schedule", sc]
 
 # +
-# # ! code .
-
-# +
-# mes = "'明日はマラソン"
+# mes = "'マラソンの練習"
 # out = main(mes)
 
 # +

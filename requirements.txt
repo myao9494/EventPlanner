@@ -1,6 +1,6 @@
 python-dotenv
-openai
 pendulum
 requests
 fastapi
 uvicorn
+openai>=0.10.0

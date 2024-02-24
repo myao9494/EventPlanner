@@ -31,8 +31,8 @@ class Item(BaseModel):
 @app.post("/process/")
 async def process_input(item: Item):
     # アップロードされたスクリプトのmain関数を呼び出し、結果を取得
-    # result = call_main_function(item.text)
-    result = "sss"
+    result = call_main_function(item.text)
+    # result = "sss"
     # 処理結果をクライアントに返す
     return {"result": result}
 
