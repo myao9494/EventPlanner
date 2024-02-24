@@ -305,6 +305,7 @@ def main(tex):
     kekka = remind_make.main(tex, now)
     response = confirm_todo_or_schdule(tex,now)
     msg = response.choices[0].message.content
+    print(msg)
     if msg == str(now) or not extract_datetime_from_string(msg):
         print("これはTODO")
         res = sort_task(tex)
