@@ -2,3 +2,5 @@ python-dotenv
 openai
 pendulum
 requests
+fastapi
+uvicorn
