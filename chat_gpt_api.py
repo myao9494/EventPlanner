@@ -68,16 +68,19 @@ def extract_datetime_from_string(string):
     """
 
     # 正規表現パターンで日時部分を抽出
-#     pattern = r'.*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}).*'
-#     match = re.match(pattern, string)
-    match = re.search(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', string)
+    # ISO 8601 形式と "YYYY-MM-DD HH:MM:SS+HH:MM" 形式の両方に対応
+    match = re.search(r'\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\+\d{2}:\d{2})?', string)
 
     if match:
         extracted_datetime_str = match.group(0)
-        datetime_obj = datetime.datetime.strptime(extracted_datetime_str, "%Y-%m-%dT%H:%M:%S")
+        # タイムゾーン情報があるかどうかでフォーマットを分岐
+        if '+' in extracted_datetime_str:
+            datetime_obj = datetime.datetime.strptime(extracted_datetime_str, "%Y-%m-%d %H:%M:%S%z")
+        else:
+            datetime_obj = datetime.datetime.strptime(extracted_datetime_str, "%Y-%m-%dT%H:%M:%S")
         return datetime_obj
     else:
-        return False
+        return None
 
 # 使用例
 # input_string = '前のテキスト2023-07-19T15:08:32後のテキスト'
@@ -324,6 +327,50 @@ def main(tex):
         print(sc)
         sc = update_date_in_datetime_str(sc,nitiji)
         return ["schedule", sc]
+
+
+# +
+import re
+import datetime
+
+def extract_datetime_from_string(string):
+    """
+    文字列から日時を抽出する関数
+
+    Args:
+        string (str): 日時が含まれる文字列
+
+    Returns:
+        datetime.datetime: 抽出された日時オブジェクト。日時が見つからなかった場合はNone。
+
+    Raises:
+        なし
+    """
+
+    # 正規表現パターンで日時部分を抽出
+    # ISO 8601 形式と "YYYY-MM-DD HH:MM:SS+HH:MM" 形式の両方に対応
+    match = re.search(r'\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\+\d{2}:\d{2})?', string)
+
+    if match:
+        extracted_datetime_str = match.group(0)
+        # タイムゾーン情報があるかどうかでフォーマットを分岐
+        if '+' in extracted_datetime_str:
+            datetime_obj = datetime.datetime.strptime(extracted_datetime_str, "%Y-%m-%d %H:%M:%S%z")
+        else:
+            datetime_obj = datetime.datetime.strptime(extracted_datetime_str, "%Y-%m-%dT%H:%M:%S")
+        return datetime_obj
+    else:
+        return None
+
+# -
+
+
+
+
+
+msg = "2024-02-10 00:00:00+09:00"
+
+extract_datetime_from_string(msg)
 
 # +
 # mes = "'マラソンの練習"
