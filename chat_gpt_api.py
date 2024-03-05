@@ -95,23 +95,35 @@ def extract_datetime_from_string(string):
 
     Returns:
         datetime.datetime: 抽出された日時オブジェクト。日時が見つからなかった場合はNone。
-
-    Raises:
-        なし
     """
-    match = re.search(r'\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\+\d{2}:\d{2})?', string)
+    # 正規表現パターンで日時部分を抽出（タイムゾーン情報がある場合とない場合の両方に対応）
+    match = re.search(r'\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?', string)
     if match:
         extracted_datetime_str = match.group(0)
-        # タイムゾーン情報があるかどうかでフォーマットを分岐し、さらにTの有無にも対応
-        if '+' in extracted_datetime_str:
-            datetime_obj = datetime.datetime.strptime(extracted_datetime_str, "%Y-%m-%d %H:%M:%S%z")
-        elif 'T' in extracted_datetime_str:
-            datetime_obj = datetime.datetime.strptime(extracted_datetime_str, "%Y-%m-%dT%H:%M:%S")
+        # タイムゾーン情報があるかどうか
+        if '+' in extracted_datetime_str or 'Z' in extracted_datetime_str:
+            # タイムゾーン情報を含む場合のフォーマット
+            datetime_format = "%Y-%m-%d %H:%M:%S%z"
         else:
-            datetime_obj = datetime.datetime.strptime(extracted_datetime_str, "%Y-%m-%d %H:%M:%S")
-        return datetime_obj
+            # タイムゾーン情報を含まない場合のフォーマット
+            datetime_format = "%Y-%m-%d %H:%M:%S"
+
+        # 抽出した日時文字列をdatetimeオブジェクトに変換
+        try:
+            datetime_obj = datetime.datetime.strptime(extracted_datetime_str, datetime_format)
+            return datetime_obj
+        except ValueError:
+            # ミリ秒を含む場合など、細かいフォーマットの違いに対応
+            datetime_format = "%Y-%m-%d %H:%M:%S.%f%z" if '+' in extracted_datetime_str or 'Z' in extracted_datetime_str else "%Y-%m-%d %H:%M:%S.%f"
+            try:
+                datetime_obj = datetime.datetime.strptime(extracted_datetime_str, datetime_format)
+                return datetime_obj
+            except ValueError as e:
+                print(f"Error parsing datetime with format {datetime_format}: {e}")
+                return None
     else:
         return None
+
 
 
 # 使用例
