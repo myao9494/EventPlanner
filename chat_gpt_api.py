@@ -88,7 +88,7 @@ def get_message_content(response):
 
 def extract_datetime_from_string(string):
     """
-    文字列から日時を抽出する関数。ISO 8601形式にも対応。
+    文字列から日時を抽出する関数。ISO 8601形式およびその変形に対応。
 
     Args:
         string (str): 日時が含まれる文字列
@@ -96,26 +96,34 @@ def extract_datetime_from_string(string):
     Returns:
         datetime.datetime: 抽出された日時オブジェクト。日時が見つからなかった場合はNone。
     """
-    # 正規表現パターンを更新して、ISO 8601形式に対応
     match = re.search(r'\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)?', string)
     if match:
         extracted_datetime_str = match.group(0)
-        # タイムゾーン情報があるかどうかでフォーマットを分岐
-        if '+' in extracted_datetime_str or 'Z' in extracted_datetime_str:
-            datetime_format = "%Y-%m-%dT%H:%M:%S%z"
+        # 'T'の有無で日時フォーマットを決定
+        if 'T' in extracted_datetime_str:
+            separator = 'T'
         else:
-            datetime_format = "%Y-%m-%d %H:%M:%S"
-
+            separator = ' '
+        # タイムゾーン情報の有無でフォーマットを分岐
+        if '+' in extracted_datetime_str or 'Z' in extracted_datetime_str:
+            datetime_format = f"%Y-%m-%d{separator}%H:%M:%S%z"
+        else:
+            datetime_format = f"%Y-%m-%d{separator}%H:%M:%S"
         # datetimeオブジェクトに変換
         try:
             datetime_obj = datetime.datetime.strptime(extracted_datetime_str, datetime_format)
             return datetime_obj
         except ValueError as e:
-            # フォーマットエラー時の処理
             print(f"Error parsing datetime with format {datetime_format}: {e}")
             return None
     else:
         return None
+
+# 関数のテストはコメントアウトしています
+# test_string = '2025-02-05 07:00:00+09:00'
+# result = extract_datetime_from_string_updated(test_string)
+# print(result)
+
 
 # 関数呼び出しはコメントアウトしています
 # result = extract_datetime_from_string('2025-01-10T07:00:00+09:00')
