@@ -75,7 +75,7 @@ def main(string, kiten_datetime):
             print("失敗")
             out = False, string, datetime
     except:
-        print("dame")
+        print("失敗")
         out = False,string,""
 
     return out

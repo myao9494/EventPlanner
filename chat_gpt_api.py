@@ -348,6 +348,7 @@ def main(tex):
     now = pendulum.now('Asia/Tokyo')
     kekka = remind_make.main(tex, now)
     if kekka != "失敗":
+        print(kekka)
         tex = kekka[6]
     response = confirm_todo_or_schdule(tex,now)
     msg = response.choices[0].message.content
