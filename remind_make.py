@@ -70,7 +70,7 @@ def main(string, kiten_datetime):
                 naiyo = naiyo[result.end():]
             naiyo = _delete_jyosi(naiyo)
 
-            out = y, M, d, h, mi, naiyo
+            out = y, M, d, h, mi, naiyo,string
         else:
             print("失敗")
             out = False, string, datetime

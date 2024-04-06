@@ -86,9 +86,12 @@ def get_message_content(response):
 # import re
 # import datetime
 
+import re
+import datetime
+
 def extract_datetime_from_string(string):
     """
-    文字列から日時を抽出する関数
+    文字列から日時を抽出する関数。ISO 8601形式にも対応。
 
     Args:
         string (str): 日時が含まれる文字列
@@ -96,33 +99,30 @@ def extract_datetime_from_string(string):
     Returns:
         datetime.datetime: 抽出された日時オブジェクト。日時が見つからなかった場合はNone。
     """
-    # 正規表現パターンで日時部分を抽出（タイムゾーン情報がある場合とない場合の両方に対応）
-    match = re.search(r'\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?(\+\d{2}:\d{2})?', string)
+    # 正規表現パターンを更新して、ISO 8601形式に対応
+    match = re.search(r'\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)?', string)
     if match:
         extracted_datetime_str = match.group(0)
-        # タイムゾーン情報があるかどうか
+        # タイムゾーン情報があるかどうかでフォーマットを分岐
         if '+' in extracted_datetime_str or 'Z' in extracted_datetime_str:
-            # タイムゾーン情報を含む場合のフォーマット
-            datetime_format = "%Y-%m-%d %H:%M:%S%z"
+            datetime_format = "%Y-%m-%dT%H:%M:%S%z"
         else:
-            # タイムゾーン情報を含まない場合のフォーマット
             datetime_format = "%Y-%m-%d %H:%M:%S"
 
-        # 抽出した日時文字列をdatetimeオブジェクトに変換
+        # datetimeオブジェクトに変換
         try:
             datetime_obj = datetime.datetime.strptime(extracted_datetime_str, datetime_format)
             return datetime_obj
-        except ValueError:
-            # ミリ秒を含む場合など、細かいフォーマットの違いに対応
-            datetime_format = "%Y-%m-%d %H:%M:%S.%f%z" if '+' in extracted_datetime_str or 'Z' in extracted_datetime_str else "%Y-%m-%d %H:%M:%S.%f"
-            try:
-                datetime_obj = datetime.datetime.strptime(extracted_datetime_str, datetime_format)
-                return datetime_obj
-            except ValueError as e:
-                print(f"Error parsing datetime with format {datetime_format}: {e}")
-                return None
+        except ValueError as e:
+            # フォーマットエラー時の処理
+            print(f"Error parsing datetime with format {datetime_format}: {e}")
+            return None
     else:
         return None
+
+# 関数呼び出しはコメントアウトしています
+# result = extract_datetime_from_string('2025-01-10T07:00:00+09:00')
+# print(result)
 
 
 
@@ -331,6 +331,7 @@ def trans_datetime(kekka):
 #     print(get_message_content(res))
 #     bunrui = get_message_content(res)["sort"]
 
+
 # else:
 #     if kekka[0]:
 #         jibun = trans_datetime(kekka)
@@ -350,6 +351,8 @@ def trans_datetime(kekka):
 def main(tex):
     now = pendulum.now('Asia/Tokyo')
     kekka = remind_make.main(tex, now)
+    if kekka != "失敗":
+        tex = kekka[6]
     response = confirm_todo_or_schdule(tex,now)
     msg = response.choices[0].message.content
     print(msg)
