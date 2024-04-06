@@ -86,9 +86,6 @@ def get_message_content(response):
 # import re
 # import datetime
 
-import re
-import datetime
-
 def extract_datetime_from_string(string):
     """
     文字列から日時を抽出する関数。ISO 8601形式にも対応。
@@ -330,7 +327,6 @@ def trans_datetime(kekka):
 #     res = sort_task(tex)
 #     print(get_message_content(res))
 #     bunrui = get_message_content(res)["sort"]
-
 
 # else:
 #     if kekka[0]:
