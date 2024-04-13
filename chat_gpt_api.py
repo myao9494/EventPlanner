@@ -353,11 +353,15 @@ def trans_datetime(kekka):
 # -
 
 def main(tex):
+    moto = tex
     now = pendulum.now('Asia/Tokyo')
     kekka = remind_make.main(tex, now)
     if kekka != "失敗":
         print(kekka)
-        tex = kekka[6]
+        try:
+            tex = kekka[6]
+        except:
+            tex = moto
     response = confirm_todo_or_schdule(tex,now)
     msg = response.choices[0].message.content
     print(msg)
@@ -368,7 +372,7 @@ def main(tex):
         bunrui = res.choices[0].message.function_call.arguments
         bunrui = eval(bunrui)
         bunrui = bunrui["sort"]
-        return ["todo", tex,bunrui]
+        return ["todo", moto,bunrui]
     else:
         print(msg)
         nitiji = extract_datetime_from_string(msg)
