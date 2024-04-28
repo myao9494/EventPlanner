@@ -20,6 +20,7 @@ function updateSpreadsheetWithResults() {
     var inputStatuColumnIndex = values[0].indexOf('ステータス');
     var inputDateColumnIndex = values[0].indexOf('入力日時');
     var inputDurationColumnIndex = values[0].indexOf('日数');
+    var translatedTextColumnIndex = values[0].indexOf('文字列インプットの英訳');  // 新しい列のインデックス
 
     // Loop through rows, skipping the header.
     for (var i = 1; i < values.length; i++) {
@@ -29,13 +30,22 @@ function updateSpreadsheetWithResults() {
         if (row[nameColumnIndex] === '' && row[inputTextColumnIndex] !== '') {
             var result = callExternalAPI(row[inputTextColumnIndex]);
 
-            // Log and process the API result.
+            // 翻訳を行い、結果を「文字列インプットの英訳」列にセット
+            var translatedText = LanguageApp.translate(row[inputTextColumnIndex], 'ja', 'en');
+            sheet.getRange(i + 1, translatedTextColumnIndex + 1).setValue(translatedText);
+
+            // ログとその他の処理
             Logger.log(result[0]);
+            
             if (result[0] === 'schedule') {
                 // If schedule, set start/end times, title, remind flag, status, input date, and duration.
                 var scheduleDetails = result[1];
-                sheet.getRange(i + 1, startDateColumnIndex + 1).setValue(scheduleDetails.DTSTART);
-                sheet.getRange(i + 1, endDateColumnIndex + 1).setValue(scheduleDetails.DTEND);
+                // 日時フォーマットを統一する
+                var formattedStartDate = formatDate(scheduleDetails.DTSTART);
+                var formattedEndDate = formatDate(scheduleDetails.DTEND);
+                sheet.getRange(i + 1, startDateColumnIndex + 1).setValue(formattedStartDate);
+                sheet.getRange(i + 1, endDateColumnIndex + 1).setValue(formattedEndDate);
+
                 sheet.getRange(i + 1, nameColumnIndex + 1).setValue(scheduleDetails.title);
                 sheet.getRange(i + 1, remindSetColumnIndex + 1).setValue(true);
                 sheet.getRange(i + 1, inputStatuColumnIndex + 1).setValue(false);
@@ -51,9 +61,17 @@ function updateSpreadsheetWithResults() {
     }
 }
 
+// 日時フォーマットを統一するための補助関数
+function formatDate(dateString) {
+    var date = new Date(dateString);
+    // "Asia/Tokyo"タイムゾーンを使用して日時をフォーマットする
+    return Utilities.formatDate(date, "GMT", "yyyy-MM-dd'T'HH:mm:ss'Z'");
+}
+
+
 // Function to make a POST request to an external API and return the result.
 function callExternalAPI(text) {
-    var apiUrl = "API URL";
+    var apiUrl = "https://eventplanner-m0az.onrender.com/process/";
     var options = {
         'method' : 'post',
         'contentType': 'application/json',
