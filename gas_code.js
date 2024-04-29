@@ -1,128 +1,144 @@
 /**
- * Updates a Google Spreadsheet with data retrieved from an external API.
- * It processes rows with an empty "名称" column, calls an API with the text from "文字列インプット" column,
- * and updates the spreadsheet with the response. Schedule items get start/end times, title, and duration set,
- * while todos only update the title and input date.
+ * 外部APIからデータを取得してGoogleスプレッドシートを更新します。
+ * 「名称」列が空の行を処理し、「文字列インプット」列からAPIを呼び出し、
+ * 応答をスプレッドシートに更新します。予定項目は開始/終了時刻、タイトル、
+ * 期間が設定され、ToDoはタイトルと入力日のみ更新されます。
  */
 
-// Main function to update the spreadsheet based on results from an external API.
+// スプレッドシートを更新するメイン関数
 function updateSpreadsheetWithResults() {
-    var ss = SpreadsheetApp.getActiveSpreadsheet(); // スプレッドシート全体を取得
-    var sheet = ss.getSheetByName("スケジュール"); // メインシートの名前を適切に設定してください
-    var oldSheet = ss.getSheetByName("old_data"); // old_data シートを取得
-    var dataRange = sheet.getDataRange();
-    var values = dataRange.getValues();
-    var oldRange = oldSheet.getDataRange();
-    var oldValues = oldRange.getValues();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const scheduleSheet = ss.getSheetByName("スケジュール");
+    const oldDataSheet = ss.getSheetByName("old_data");
+    const dataRange = scheduleSheet.getDataRange();
+    const values = dataRange.getValues();
+    const oldDataRange = oldDataSheet.getDataRange();
+    const oldValues = oldDataRange.getValues();
 
-    // Identify column indexes based on header names.
-    var nameColumnIndex = values[0].indexOf('名称');
-    var startDateColumnIndex = values[0].indexOf('開始日時');
-    var endDateColumnIndex = values[0].indexOf('終了日時');
-    var remindSetColumnIndex = values[0].indexOf('リマインドセット');
-    var inputTextColumnIndex = values[0].indexOf('文字列インプット');
-    var inputStatuColumnIndex = values[0].indexOf('ステータス');
-    var RemindStatuColumnIndex = values[0].indexOf('リマインドステータス');
-    var inputDateColumnIndex = values[0].indexOf('入力日時');
-    var inputDurationColumnIndex = values[0].indexOf('日数');
-    var translatedTextColumnIndex = values[0].indexOf('文字列インプットの英訳');  // 新しい列のインデックス
-    var processedRows = 0;  // 処理した行数をカウント
+    // ヘッダー名に基づいて列インデックスを特定
+    const headerIndexes = getHeaderIndexes(values[0]);
 
-    var mainLastRow = sheet.getLastRow();
-    var oldLastRow = oldSheet.getLastRow();
-    if (mainLastRow > oldLastRow) {
-        // 新しい行をコピー
-        var newRows = sheet.getRange(oldLastRow + 1, 1, mainLastRow - oldLastRow, sheet.getLastColumn()).getValues();
-        oldSheet.getRange(oldLastRow + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
-    }
+    // 新しい行が追加されているか確認し、追加されていれば古いシートにコピー
+    copyNewRowsToOldDataSheet(scheduleSheet, oldDataSheet);
 
-    // Loop through rows, skipping the header.
-    for (var i = 1; i < values.length; i++) {
-        var row = values[i];
+    // データ行をループ処理
+    processRows(values, oldValues, scheduleSheet, headerIndexes);
 
-        var isChanged = false;
-        // "開始日時" または "終了日時" 列が変更されているかチェック
-        if (row[startDateColumnIndex] !== oldValues[i][startDateColumnIndex] ||
-            row[endDateColumnIndex] !== oldValues[i][endDateColumnIndex]) {
-            isChanged = true;
-        }
-
-        if (isChanged) {
-            sheet.getRange(i + 1, RemindStatuColumnIndex + 1).setValue(''); // "ステータス" 列を空白に設定
-            sendLineMessage(`Updated ${row[nameColumnIndex]} changes in Start/End dates.`);
-        }
-
-
-        // Process rows where "名称" is empty and "文字列インプット" is not.
-        if (row[nameColumnIndex] === '' && row[inputTextColumnIndex] !== '') {
-            var result = callExternalAPI(row[inputTextColumnIndex]);
-
-            // 翻訳を行い、結果を「文字列インプットの英訳」列にセット
-            var translatedText = LanguageApp.translate(row[inputTextColumnIndex], 'ja', 'en');
-            sheet.getRange(i + 1, translatedTextColumnIndex + 1).setValue(translatedText);
-
-            // ログとその他の処理
-            Logger.log(result[0]);
-            
-            if (result[0] === 'schedule') {
-                // If schedule, set start/end times, title, remind flag, status, input date, and duration.
-                var scheduleDetails = result[1];
-                // 日時フォーマットを統一する
-                var formattedStartDate = formatDate(scheduleDetails.DTSTART);
-                var formattedEndDate = formatDate(scheduleDetails.DTEND);
-                sheet.getRange(i + 1, startDateColumnIndex + 1).setValue(formattedStartDate);
-                sheet.getRange(i + 1, endDateColumnIndex + 1).setValue(formattedEndDate);
-
-                sheet.getRange(i + 1, nameColumnIndex + 1).setValue(scheduleDetails.title);
-                sheet.getRange(i + 1, remindSetColumnIndex + 1).setValue(true);
-                sheet.getRange(i + 1, inputStatuColumnIndex + 1).setValue(false);
-                sheet.getRange(i + 1, inputDateColumnIndex + 1).setValue(new Date().toISOString());
-                sheet.getRange(i + 1, inputDurationColumnIndex + 1).setValue(scheduleDetails.duration);
-            } else {
-                // If todo, only set title, status, and input date.
-                sheet.getRange(i + 1, nameColumnIndex + 1).setValue(result[1]);
-                sheet.getRange(i + 1, inputStatuColumnIndex + 1).setValue(false);
-                sheet.getRange(i + 1, inputDateColumnIndex + 1).setValue(new Date().toISOString());
-            processedRows++;  // 行が処理されたたびにカウントを増やす
-            }
-          // 処理完了後、LINEに通知
-          if (processedRows > 0) {
-            sendLineMessage(`update: ${result[1]}.`);
-          } else {
-            sendLineMessage("No rows needed updating.");
-          }
-        }
-    }
-        // 既存のデータをクリア
-      oldSheet.clear();
-
-      // データをコピー
-      var range = sheet.getDataRange();
-      var data = range.getValues();
-      oldSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
+    // 古いデータをクリアして新しいデータで上書き
+    refreshOldDataSheet(scheduleSheet, oldDataSheet);
 }
 
-// 日時フォーマットを統一するための補助関数
-function formatDate(dateString) {
-    var date = new Date(dateString);
-    // "Asia/Tokyo"タイムゾーンを使用して日時をフォーマットする
-    return Utilities.formatDate(date, "GMT", "yyyy-MM-dd'T'HH:mm:ss'Z'");
-}
-
-
-// Function to make a POST request to an external API and return the result.
-function callExternalAPI(text) {
-    var apiUrl = "https://eventplanner-m0az.onrender.com/process/";
-    var options = {
-        'method' : 'post',
-        'contentType': 'application/json',
-        'payload' : JSON.stringify({text: text})
+// ヘッダーから列インデックスを抽出する補助関数
+function getHeaderIndexes(headers) {
+    return {
+        name: headers.indexOf('名称'),
+        startDate: headers.indexOf('開始日時'),
+        endDate: headers.indexOf('終了日時'),
+        remindSet: headers.indexOf('リマインドセット'),
+        inputText: headers.indexOf('文字列インプット'),
+        status: headers.indexOf('ステータス'),
+        remindStatus: headers.indexOf('リマインドステータス'),
+        inputDate: headers.indexOf('入力日時'),
+        duration: headers.indexOf('日数'),
+        translatedText: headers.indexOf('文字列インプットの英訳')
     };
+}
 
-    var response = UrlFetchApp.fetch(apiUrl, options);
-    var json = JSON.parse(response.getContentText());
-    Logger.log(JSON.stringify(json));
+// 新しい行を古いデータシートにコピーする関数
+function copyNewRowsToOldDataSheet(scheduleSheet, oldDataSheet) {
+    const mainLastRow = scheduleSheet.getLastRow();
+    const oldLastRow = oldDataSheet.getLastRow();
+    if (mainLastRow > oldLastRow) {
+        const newRows = scheduleSheet.getRange(oldLastRow + 1, 1, mainLastRow - oldLastRow, scheduleSheet.getLastColumn()).getValues();
+        oldDataSheet.getRange(oldLastRow + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
+    }
+}
 
-    // Extract and return the relevant part of the API response.
-    return json.result;
+// 行を処理する関数
+function processRows(values, oldValues, sheet, indexes) {
+    let processedRows = 0;
+    for (let i = 1; i < values.length; i++) {
+        if (values[i][indexes.name] === '' && values[i][indexes.inputText] !== '') {
+            updateRowBasedOnAPIResponse(i, values[i], sheet, indexes);
+            processedRows++;
+        }
+        checkAndUpdateDateChanges(i, values[i], oldValues[i], sheet, indexes);
+    }
+    if (processedRows > 0) {
+        sendLineMessage(`Updated ${processedRows} rows.`);
+    } else {
+        sendLineMessage("No rows needed updating.");
+    }
+}
+
+// API応答に基づいて行を更新する関数
+function updateRowBasedOnAPIResponse(rowIndex, row, sheet, indexes) {
+    const result = callExternalAPI(row[indexes.inputText]);
+    const translatedText = LanguageApp.translate(row[indexes.inputText], 'ja', 'en');
+    sheet.getRange(rowIndex + 1, indexes.translatedText + 1).setValue(translatedText);
+    Logger.log(result[0]);
+
+    // 追加のデータをセットアップ
+    if (result[0] === 'schedule') {
+        const scheduleDetails = result[1];
+        const formattedStartDate = formatDate(scheduleDetails.DTSTART);
+        const formattedEndDate = formatDate(scheduleDetails.DTEND);
+        sheet.getRange(rowIndex + 1, indexes.startDate + 1).setValue(formattedStartDate);
+        sheet.getRange(rowIndex + 1, indexes.endDate + 1).setValue(formattedEndDate);
+        sheet.getRange(rowIndex + 1, indexes.name + 1).setValue(scheduleDetails.title);
+        sheet.getRange(rowIndex + 1, indexes.remindSet + 1).setValue(true);
+        sheet.getRange(rowIndex + 1, indexes.status + 1).setValue(false);
+        sheet.getRange(rowIndex + 1, indexes.inputDate + 1).setValue(new Date().toISOString());
+        sheet.getRange(rowIndex + 1, indexes.duration + 1).setValue(scheduleDetails.duration);
+    } else {
+        sheet.getRange(rowIndex + 1, indexes.name + 1).setValue(result[1]);
+        sheet.getRange(rowIndex + 1, indexes.status + 1).setValue(false);
+        sheet.getRange(rowIndex + 1, indexes.inputDate + 1).setValue(new Date().toISOString());
+    }
+}
+
+// 開始日または終了日が変更されているか確認し、必要に応じて更新
+function checkAndUpdateDateChanges(rowIndex, row, oldRow, sheet, indexes) {
+    if (row[indexes.startDate] !== oldRow[indexes.startDate] ||
+        row[indexes.endDate] !== oldRow[indexes.endDate]) {
+        sheet.getRange(rowIndex + 1, indexes.remindStatus + 1).setValue('');
+        sendLineMessage(`Updated ${row[indexes.name]} changes in Start/End dates.`);
+    }
+}
+
+// 既存データをクリアし新しいデータで更新する関数
+function refreshOldDataSheet(scheduleSheet, oldDataSheet) {
+    oldDataSheet.clear();
+    const range = scheduleSheet.getDataRange();
+    const data = range.getValues();
+    oldDataSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
+}
+
+// 日時をフォーマットする補助関数
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return Utilities.formatDate(date, "Asia/Tokyo", "yyyy-MM-dd'T'HH:mm:ss'Z'");
+}
+
+// 外部APIを呼び出す関数
+function callExternalAPI(text) {
+    const apiUrl = "https://example.com/api";
+    const options = {
+        method: 'POST',
+        contentType: 'application/json',
+        payload: JSON.stringify({ text: text })
+    };
+    const response = UrlFetchApp.fetch(apiUrl, options);
+    return JSON.parse(response.getContentText()).result;
+}
+
+// LINEへメッセージ送信
+function sendLineMessage(message) {
+    const lineNotifyToken = "YOUR_LINE_NOTIFY_TOKEN";
+    const options = {
+        method: 'post',
+        headers: {'Authorization': 'Bearer ' + lineNotifyToken},
+        payload: 'message=' + message
+    };
+    UrlFetchApp.fetch('https://notify-api.line.me/api/notify', options);
 }
