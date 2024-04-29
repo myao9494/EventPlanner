@@ -21,13 +21,36 @@ function updateSpreadsheetWithResults() {
     // 新しい行が追加されているか確認し、追加されていれば古いシートにコピー
     copyNewRowsToOldDataSheet(scheduleSheet, oldDataSheet);
 
+   // 削除された項目を特定し、LINEで通知し、old_dataから削除
+    notifyAndCleanDeletedItems(scheduleSheet, oldDataSheet);
+
     // データ行をループ処理
-    processRows(values, oldValues, scheduleSheet, headerIndexes);
+    processRows( dataRange.getValues(), oldDataRange.getValues(), scheduleSheet, headerIndexes);
 
     // 古いデータをクリアして新しいデータで上書き
     refreshOldDataSheet(scheduleSheet, oldDataSheet);
 }
 
+// 削除された項目を特定してLINEで通知し、old_data シートからも削除する関数
+function notifyAndCleanDeletedItems(scheduleSheet, oldDataSheet) {
+    const scheduleValues = scheduleSheet.getDataRange().getValues();
+    const oldValues = oldDataSheet.getDataRange().getValues();
+    const scheduleNames = scheduleValues.map(row => row[3]); // 名称列が0番目だと仮定
+    let rowsToDelete = [];
+
+    oldValues.forEach((row, index) => {
+        if (!scheduleNames.includes(row[3]) && row[3] !== '') {
+            sendLineMessage(`削除された項目: ${row[3]}`);
+            rowsToDelete.push(index + 1); // 行は1から始まるため
+        }
+    });
+
+    // 行を後ろから削除する
+    rowsToDelete.reverse().forEach(rowNum => {
+        oldDataSheet.deleteRow(rowNum);
+        scheduleSheet.deleteRow(rowNum);
+    });
+}
 // ヘッダーから列インデックスを抽出する補助関数
 function getHeaderIndexes(headers) {
     return {
@@ -66,8 +89,8 @@ function processRows(values, oldValues, sheet, indexes) {
     }
     if (processedRows > 0) {
         sendLineMessage(`Updated ${processedRows} rows.`);
-    } else {
-        sendLineMessage("No rows needed updating.");
+    // } else {
+    //     sendLineMessage("No rows needed updating.");
     }
 }
 
@@ -102,7 +125,9 @@ function checkAndUpdateDateChanges(rowIndex, row, oldRow, sheet, indexes) {
     if (row[indexes.startDate] !== oldRow[indexes.startDate] ||
         row[indexes.endDate] !== oldRow[indexes.endDate]) {
         sheet.getRange(rowIndex + 1, indexes.remindStatus + 1).setValue('');
-        sendLineMessage(`Updated ${row[indexes.name]} changes in Start/End dates.`);
+        if (indexes.name != ""){
+            sendLineMessage(`Updated ${row[indexes.name]} changes in Start/End dates.`);
+        }
     }
 }
 
