@@ -7,9 +7,13 @@
 
 // Main function to update the spreadsheet based on results from an external API.
 function updateSpreadsheetWithResults() {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var ss = SpreadsheetApp.getActiveSpreadsheet(); // スプレッドシート全体を取得
+    var sheet = ss.getSheetByName("スケジュール"); // メインシートの名前を適切に設定してください
+    var oldSheet = ss.getSheetByName("old_data"); // old_data シートを取得
     var dataRange = sheet.getDataRange();
     var values = dataRange.getValues();
+    var oldRange = oldSheet.getDataRange();
+    var oldValues = oldRange.getValues();
 
     // Identify column indexes based on header names.
     var nameColumnIndex = values[0].indexOf('名称');
@@ -18,13 +22,36 @@ function updateSpreadsheetWithResults() {
     var remindSetColumnIndex = values[0].indexOf('リマインドセット');
     var inputTextColumnIndex = values[0].indexOf('文字列インプット');
     var inputStatuColumnIndex = values[0].indexOf('ステータス');
+    var RemindStatuColumnIndex = values[0].indexOf('リマインドステータス');
     var inputDateColumnIndex = values[0].indexOf('入力日時');
     var inputDurationColumnIndex = values[0].indexOf('日数');
     var translatedTextColumnIndex = values[0].indexOf('文字列インプットの英訳');  // 新しい列のインデックス
+    var processedRows = 0;  // 処理した行数をカウント
+
+    var mainLastRow = sheet.getLastRow();
+    var oldLastRow = oldSheet.getLastRow();
+    if (mainLastRow > oldLastRow) {
+        // 新しい行をコピー
+        var newRows = sheet.getRange(oldLastRow + 1, 1, mainLastRow - oldLastRow, sheet.getLastColumn()).getValues();
+        oldSheet.getRange(oldLastRow + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
+    }
 
     // Loop through rows, skipping the header.
     for (var i = 1; i < values.length; i++) {
         var row = values[i];
+
+        var isChanged = false;
+        // "開始日時" または "終了日時" 列が変更されているかチェック
+        if (row[startDateColumnIndex] !== oldValues[i][startDateColumnIndex] ||
+            row[endDateColumnIndex] !== oldValues[i][endDateColumnIndex]) {
+            isChanged = true;
+        }
+
+        if (isChanged) {
+            sheet.getRange(i + 1, RemindStatuColumnIndex + 1).setValue(''); // "ステータス" 列を空白に設定
+            sendLineMessage(`Updated ${row[nameColumnIndex]} changes in Start/End dates.`);
+        }
+
 
         // Process rows where "名称" is empty and "文字列インプット" is not.
         if (row[nameColumnIndex] === '' && row[inputTextColumnIndex] !== '') {
@@ -56,9 +83,23 @@ function updateSpreadsheetWithResults() {
                 sheet.getRange(i + 1, nameColumnIndex + 1).setValue(result[1]);
                 sheet.getRange(i + 1, inputStatuColumnIndex + 1).setValue(false);
                 sheet.getRange(i + 1, inputDateColumnIndex + 1).setValue(new Date().toISOString());
+            processedRows++;  // 行が処理されたたびにカウントを増やす
             }
+          // 処理完了後、LINEに通知
+          if (processedRows > 0) {
+            sendLineMessage(`update: ${result[1]}.`);
+          } else {
+            sendLineMessage("No rows needed updating.");
+          }
         }
     }
+        // 既存のデータをクリア
+      oldSheet.clear();
+
+      // データをコピー
+      var range = sheet.getDataRange();
+      var data = range.getValues();
+      oldSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
 }
 
 // 日時フォーマットを統一するための補助関数
