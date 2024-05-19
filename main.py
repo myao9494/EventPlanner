@@ -33,7 +33,7 @@ class Item(BaseModel):
 async def process_input(item: Item):
     # アップロードされたスクリプトのmain関数を呼び出し、結果を取得
     # result = call_main_function(item.text)
-    result = Dity_lib.main("明日は塾のテスト")
+    result = Dity_lib.main(item.text)
     # result = "sss"
     # 処理結果をクライアントに返す
     return {"result": result}
