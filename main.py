@@ -21,7 +21,8 @@ from pydantic import BaseModel
 # sys.path.append('/mnt/data/')
 
 # chat_gpt_api.pyからmain関数をインポート
-from chat_gpt_api import main as call_main_function
+# from chat_gpt_api import main as call_main_function
+import Dity_lib
 
 app = FastAPI()
 
@@ -31,7 +32,8 @@ class Item(BaseModel):
 @app.post("/process/")
 async def process_input(item: Item):
     # アップロードされたスクリプトのmain関数を呼び出し、結果を取得
-    result = call_main_function(item.text)
+    # result = call_main_function(item.text)
+    result = Dity_lib.main("明日は塾のテスト")
     # result = "sss"
     # 処理結果をクライアントに返す
     return {"result": result}
