@@ -17,7 +17,6 @@ import json
 import re
 # from datetime import datetime
 import pendulum
-import json
 from dify_client import ChatClient
 from dotenv import load_dotenv
 import os

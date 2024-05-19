@@ -3,4 +3,5 @@ pendulum
 requests
 fastapi
 uvicorn
-openai>=0.10.0
+openai>=0.10.
+dify_client
