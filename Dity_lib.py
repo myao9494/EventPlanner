@@ -49,13 +49,24 @@ def convert_text_to_output(text):
         list: 指定された出力フォーマット ['schedule', { 'DTSTART': ..., 'DTEND': ..., 'duration': ..., 'title': ... }]
     """
     # 正規表現パターンを定義して必要な部分を抽出
+    # pattern = re.compile(
+    #     r'カテゴリ:\w+\[schedule,\{\s*'
+    #     r'"date":\s*"(?P<date>\d{2}/\d{2})",\s*'
+    #     r'"start_time":\s*"(?P<start_time>\d{2}:\d{2}:\d{2})",\s*'
+    #     r'"end_time":\s*"(?P<end_time>\d{2}:\d{2}:\d{2})",\s*'
+    #     r'"duration":\s*(?P<duration>\d+),\s*'
+    #     r'"event":\s*"(?P<event>.*?)"\s*\}\]'
+    # )
+
     pattern = re.compile(
-        r'カテゴリ:\w+\[schedule,\{\s*'
-        r'"date":\s*"(?P<date>\d{2}/\d{2})",\s*'
-        r'"start_time":\s*"(?P<start_time>\d{2}:\d{2}:\d{2})",\s*'
-        r'"end_time":\s*"(?P<end_time>\d{2}:\d{2}:\d{2})",\s*'
-        r'"duration":\s*(?P<duration>\d+),\s*'
-        r'"event":\s*"(?P<event>.*?)"\s*\}\]'
+    r'カテゴリ:\w+\[schedule,```json\s*'
+    r'{\s*'
+    r'"date":\s*"(?P<date>\d{2}/\d{2})",\s*'
+    r'"start_time":\s*"(?P<start_time>\d{2}:\d{2}:\d{2})",\s*'
+    r'"end_time":\s*"(?P<end_time>\d{2}:\d{2}:\d{2})",\s*'
+    r'"duration":\s*(?P<duration>\d+),\s*'
+    r'"event":\s*"(?P<event>.*?)"\s*'
+    r'}\s*```]'
     )
 
     match = pattern.search(text)
@@ -141,6 +152,7 @@ def dift_sc(now, input_tex, api_key):
 
     # 現在の日時を文字列に変換
     now_str = now.strftime("%Y-%m-%d %H:%M:%S")
+    print(now_str)
 
     # ChatClientを使用してチャットメッセージを作成
     chat_response = chat_client.create_chat_message(inputs={"now": now_str}, query=input_tex, user="user_id", response_mode="blocking")
@@ -170,8 +182,7 @@ def main(input_tex):
         list: スケジュール形式またはtodo形式の出力フォーマット
     """
     # 現在の日時を東京時間で取得
-    now = pendulum.now('Asia/Tokyo')
-    
+    now = pendulum.now('Asia/Tokyo')    
     # ChatClientを使用して応答を取得
     out = dift_sc(now, input_tex, Dify_api_key)
     
