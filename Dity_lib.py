@@ -57,15 +57,16 @@ def convert_text_to_output(text):
     #     r'"duration":\s*(?P<duration>\d+),\s*'
     #     r'"event":\s*"(?P<event>.*?)"\s*\}\]'
     # )
-    # パターンを定義
+    # パターンを修正して、より柔軟な形式に対応
     pattern = re.compile(
-        r'カテゴリ:\w+\[schedule,```json\s*{\s*'
-        r'"date":\s*"(?P<date>\d{2}/\d{2})",\s*'
+        r'カテゴリ:\w+\[schedule,\s*```json\s*'
+        r'{\s*'
+        r'"date":\s*"(?P<date>\d{1,2}/\d{1,2})",\s*'
         r'"start_time":\s*"(?P<start_time>\d{2}:\d{2}:\d{2})",\s*'
         r'"end_time":\s*"(?P<end_time>\d{2}:\d{2}:\d{2})",\s*'
         r'"duration":\s*(?P<duration>\d+),\s*'
         r'"event":\s*"(?P<event>.*?)"\s*'
-        r'}\s*```]'
+        r'}\s*```\s*\]'
     )
 
     # パターンマッチングを実行
