@@ -61,7 +61,7 @@ def convert_text_to_output(text):
     pattern = re.compile(
         r'カテゴリ:\w+\[schedule,\s*```json\s*'
         r'{\s*'
-        r'"date":\s*"(?P<date>\d{1,2}/\d{1,2})",\s*'
+        r'"date":\s*"(?P<date>\d{1,4}/\d{1,2}/\d{1,2})",\s*'
         r'"start_time":\s*"(?P<start_time>\d{2}:\d{2}:\d{2})",\s*'
         r'"end_time":\s*"(?P<end_time>\d{2}:\d{2}:\d{2})",\s*'
         r'"duration":\s*(?P<duration>\d+),\s*'
@@ -80,8 +80,8 @@ def convert_text_to_output(text):
 
     # 日付を整形する
     date_str = schedule_json['date']
-    month, day = date_str.split('/')
-    formatted_date = f"2024-{month.zfill(2)}-{day.zfill(2)}"
+    year, month, day = date_str.split('/')
+    formatted_date = f"{year.zfill(4)}-{month.zfill(2)}-{day.zfill(2)}"
 
     # 出力フォーマットの変換
     output = ['schedule', {
